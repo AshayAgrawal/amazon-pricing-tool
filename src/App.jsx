@@ -340,16 +340,6 @@ function computeRow(row, assumptions) {
   };
 }
 
-function SummaryCard({ label, value, hint }) {
-  return (
-    <div className="summary-card">
-      <div className="summary-label">{label}</div>
-      <div className="summary-value">{value}</div>
-      <div className="summary-hint">{hint}</div>
-    </div>
-  );
-}
-
 function Metric({ label, value }) {
   return (
     <div className="metric-card">
@@ -375,19 +365,6 @@ export default function App() {
   const [csvMessage, setCsvMessage] = useState("");
 
   const computedRows = useMemo(() => rows.map((row) => computeRow(row, assumptions)), [rows, assumptions]);
-
-  const totals = useMemo(() => {
-    const avgTarget =
-      computedRows.length > 0
-        ? computedRows.reduce((sum, row) => sum + row.targetSellingPrice, 0) / computedRows.length
-        : 0;
-    return {
-      skuCount: computedRows.length,
-      avgTarget,
-      highestTarget: Math.max(0, ...computedRows.map((row) => row.targetSellingPrice)),
-      lowestTarget: computedRows.length > 0 ? Math.min(...computedRows.map((row) => row.targetSellingPrice)) : 0,
-    };
-  }, [computedRows]);
 
   const updateRow = (id, key, value) => {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, [key]: value } : row)));
@@ -471,7 +448,7 @@ export default function App() {
         button, input, select { font: inherit; }
         .app-shell { min-height: 100vh; padding: 24px 16px 40px; }
         .page { max-width: 1280px; margin: 0 auto; display: grid; gap: 18px; }
-        .hero, .card, .summary-card { background: rgba(255, 252, 247, 0.95); border: 1px solid rgba(32, 49, 45, 0.08); border-radius: 24px; box-shadow: 0 18px 44px rgba(32, 49, 45, 0.07); }
+        .hero, .card { background: rgba(255, 252, 247, 0.95); border: 1px solid rgba(32, 49, 45, 0.08); border-radius: 24px; box-shadow: 0 18px 44px rgba(32, 49, 45, 0.07); }
         .hero { padding: 28px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; background: linear-gradient(145deg, #184f42, #143630); color: #fbf8f2; }
         .hero h1 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.05em; line-height: 0.98; }
         .hero p { margin: 10px 0 0; max-width: 760px; color: rgba(251, 248, 242, 0.78); line-height: 1.6; }
@@ -482,18 +459,16 @@ export default function App() {
         .button-ghost, .upload-label { background: rgba(251, 248, 242, 0.12); color: #fbf8f2; border: 1px solid rgba(251, 248, 242, 0.18); }
         .page-tab { background: rgba(255, 252, 247, 0.78); color: #24423b; border: 1px solid rgba(32, 49, 45, 0.12); }
         .page-tab.active { background: #184f42; border-color: #184f42; color: #fbf8f2; }
-        .summary-grid, .product-fields, .metric-grid, .subgrid, .result-grid, .formula-grid, .pricing-sections { display: grid; gap: 16px; }
-        .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .product-fields, .metric-grid, .subgrid, .result-grid, .formula-grid, .pricing-sections { display: grid; gap: 16px; }
         .product-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
         .subgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .formula-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .result-grid { grid-template-columns: 1.1fr 1fr; gap: 12px; margin-bottom: 14px; }
         .pricing-sections { grid-template-columns: 1fr 1fr; }
-        .summary-card, .card { padding: 18px; }
-        .summary-label, .section-label, .metric-label { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(32, 49, 45, 0.58); }
-        .summary-value { margin-top: 8px; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.05em; }
-        .summary-hint, .section-copy, .csv-message, .helper { margin-top: 6px; color: rgba(32, 49, 45, 0.62); line-height: 1.5; }
+        .card { padding: 18px; }
+        .section-label, .metric-label { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(32, 49, 45, 0.58); }
+        .section-copy, .csv-message, .helper { margin-top: 6px; color: rgba(32, 49, 45, 0.62); line-height: 1.5; }
         .section-head { margin-bottom: 16px; }
         .section-head h2 { margin: 6px 0 0; font-size: 1.35rem; letter-spacing: -0.03em; }
         .field { display: grid; gap: 6px; }
@@ -514,7 +489,7 @@ export default function App() {
         .section-box { border: 1px solid rgba(32, 49, 45, 0.08); border-radius: 18px; padding: 14px; background: rgba(245, 239, 226, 0.45); }
         .section-box h4 { margin: 0 0 12px; font-size: 1rem; }
         .section-output { margin-top: 12px; }
-        @media (max-width: 1100px) { .summary-grid, .product-fields, .metric-grid, .subgrid, .result-grid, .formula-grid, .band-row, .pricing-sections { grid-template-columns: 1fr; } }
+        @media (max-width: 1100px) { .product-fields, .metric-grid, .subgrid, .result-grid, .formula-grid, .band-row, .pricing-sections { grid-template-columns: 1fr; } }
       `}</style>
 
       <div className="page">
@@ -539,13 +514,6 @@ export default function App() {
               <input type="file" accept=".csv" hidden onChange={handleCsvUpload} />
             </label>
           </div>
-        </section>
-
-        <section className="summary-grid">
-          <SummaryCard label="SKUs" value={String(totals.skuCount)} hint="Rows being priced" />
-          <SummaryCard label="Avg Selling Price" value={currency(totals.avgTarget)} hint="Average recommended selling price" />
-          <SummaryCard label="Highest Price" value={currency(totals.highestTarget)} hint="Highest recommended SKU price" />
-          <SummaryCard label="Lowest Price" value={currency(totals.lowestTarget)} hint="Lowest recommended SKU price" />
         </section>
 
         <nav className="page-nav">
@@ -597,7 +565,7 @@ export default function App() {
 
                   <div className="pricing-sections">
                     <div className="section-box">
-                      <h4>Basic Details</h4>
+                      <h4>1. Basic Details</h4>
                       <div className="product-fields">
                         <div className="field">
                           <label>Product name</label>
@@ -607,17 +575,9 @@ export default function App() {
                           <label>Market price</label>
                           <input type="number" value={row.marketPrice} onChange={(event) => updateRow(row.id, "marketPrice", event.target.value)} />
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="section-box">
-                      <h4>Pricing Rules</h4>
-                      <div className="product-fields">
                         <div className="field">
-                          <label>Referral fee rule</label>
-                          <select value={row.referralRule} onChange={(event) => updateRow(row.id, "referralRule", event.target.value)}>
-                            {assumptions.referralFeeRules.map((rule) => <option key={rule.name} value={rule.name}>{rule.name}</option>)}
-                          </select>
+                          <label>Target margin %</label>
+                          <input type="number" value={row.targetMarginPct} onChange={(event) => updateRow(row.id, "targetMarginPct", event.target.value)} />
                         </div>
                         <div className="field">
                           <label>GST rule</label>
@@ -625,15 +585,11 @@ export default function App() {
                             {assumptions.gstRules.map((rule) => <option key={rule.name} value={rule.name}>{rule.name}</option>)}
                           </select>
                         </div>
-                        <div className="field">
-                          <label>Target margin %</label>
-                          <input type="number" value={row.targetMarginPct} onChange={(event) => updateRow(row.id, "targetMarginPct", event.target.value)} />
-                        </div>
                       </div>
                     </div>
 
                     <div className="section-box">
-                      <h4>Cost Inputs</h4>
+                      <h4>2. Cost Inputs</h4>
                       <div className="product-fields">
                         <div className="field">
                           <label>Making cost</label>
@@ -654,72 +610,69 @@ export default function App() {
                     </div>
 
                     <div className="section-box">
-                      <h4>Shipping Inputs</h4>
+                      <h4>3. Amazon Fees</h4>
                       <div className="product-fields">
                         <div className="field">
-                          <label>Actual weight (g)</label>
-                          <input type="number" value={row.actualWeightG} onChange={(event) => updateRow(row.id, "actualWeightG", event.target.value)} />
+                          <label>Referral fee rule</label>
+                          <select value={row.referralRule} onChange={(event) => updateRow(row.id, "referralRule", event.target.value)}>
+                            {assumptions.referralFeeRules.map((rule) => <option key={rule.name} value={rule.name}>{rule.name}</option>)}
+                          </select>
                         </div>
-                        <div className="field">
-                          <label>Length (cm)</label>
-                          <input type="number" value={row.lengthCm} onChange={(event) => updateRow(row.id, "lengthCm", event.target.value)} />
+                      </div>
+                      <div className="section-box" style={{ marginTop: 12 }}>
+                        <h4>Shipping Fee</h4>
+                        <div className="product-fields">
+                          <div className="field">
+                            <label>Weight (g)</label>
+                            <input type="number" value={row.actualWeightG} onChange={(event) => updateRow(row.id, "actualWeightG", event.target.value)} />
+                          </div>
+                          <div className="field">
+                            <label>Length (cm)</label>
+                            <input type="number" value={row.lengthCm} onChange={(event) => updateRow(row.id, "lengthCm", event.target.value)} />
+                          </div>
+                          <div className="field">
+                            <label>Breadth (cm)</label>
+                            <input type="number" value={row.breadthCm} onChange={(event) => updateRow(row.id, "breadthCm", event.target.value)} />
+                          </div>
+                          <div className="field">
+                            <label>Height (cm)</label>
+                            <input type="number" value={row.heightCm} onChange={(event) => updateRow(row.id, "heightCm", event.target.value)} />
+                          </div>
                         </div>
-                        <div className="field">
-                          <label>Breadth (cm)</label>
-                          <input type="number" value={row.breadthCm} onChange={(event) => updateRow(row.id, "breadthCm", event.target.value)} />
-                        </div>
-                        <div className="field">
-                          <label>Height (cm)</label>
-                          <input type="number" value={row.heightCm} onChange={(event) => updateRow(row.id, "heightCm", event.target.value)} />
+                        <div className="metric-grid section-output">
+                          <Metric label="Chargeable weight" value={`${row.chargeableWeightKg.toFixed(2)} kg`} />
+                          <Metric label="Calculated shipping fee" value={currency(row.shippingFeeAtTarget)} />
                         </div>
                       </div>
                       <div className="metric-grid section-output">
-                        <Metric label="Chargeable weight" value={`${row.chargeableWeightKg.toFixed(2)} kg`} />
-                        <Metric label="Calculated shipping fee" value={currency(row.shippingFeeAtTarget)} />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="result-grid">
-                    <div className="result-card">
-                      <div className="metric-label">Final selling price</div>
-                      <div className="metric-value">{currency(row.targetSellingPrice)}</div>
-                      <div className="helper" style={{ color: "rgba(251, 248, 242, 0.76)" }}>
-                        Generated using this product's target margin of {pct(row.targetMarginPct)}.
-                      </div>
-                    </div>
-                    <div className="metric-card">
-                      <div className="metric-label">Delta vs market</div>
-                      <div className="metric-value">{currency(row.marketPriceDelta)}</div>
-                      <div className="helper">
-                        {num(row.marketPrice) > 0 ? `Compared with market price ${currency(row.marketPrice)}` : "Add market price to compare."}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pricing-sections">
-                    <div className="section-box">
-                      <h4>GST</h4>
-                      <div className="metric-grid section-output">
-                        <Metric label="GST rule" value={`${row.gstRuleApplied} (${pct(row.gstPctApplied)})`} />
-                        <Metric label="Product GST" value={currency(row.productGstCost)} />
-                      </div>
-                    </div>
-
-                    <div className="section-box">
-                      <h4>Amazon Fees</h4>
-                      <div className="metric-grid section-output">
-                        <Metric label="Referral fee" value={currency(row.referralFeeAtTarget)} />
                         <Metric label="Closing fee" value={currency(row.closingFeeAtTarget)} />
                         <Metric label="GST on Amazon fees" value={currency(row.gstOnAmazonFeesAtTarget)} />
+                        <Metric label="Referral fee" value={currency(row.referralFeeAtTarget)} />
                         <Metric label="Total Amazon fees" value={currency(row.totalAmazonFeesAtTarget)} />
                       </div>
                     </div>
 
                     <div className="section-box">
-                      <h4>Price Check</h4>
-                      <div className="metric-grid section-output">
-                        <Metric label="Break-even price" value={currency(row.breakEvenPrice)} />
+                      <h4>4. Final selling price</h4>
+                      <div className="metric-grid">
+                        <Metric label="GST" value={`${row.gstRuleApplied} (${pct(row.gstPctApplied)}) - ${currency(row.productGstCost)}`} />
+                        <Metric label="Break even price" value={currency(row.breakEvenPrice)} />
+                      </div>
+                      <div className="result-grid section-output">
+                        <div className="result-card">
+                          <div className="metric-label">Final selling price</div>
+                          <div className="metric-value">{currency(row.targetSellingPrice)}</div>
+                          <div className="helper" style={{ color: "rgba(251, 248, 242, 0.76)" }}>
+                            Generated using this product's target margin of {pct(row.targetMarginPct)}.
+                          </div>
+                        </div>
+                        <div className="metric-card">
+                          <div className="metric-label">Delta vs market</div>
+                          <div className="metric-value">{currency(row.marketPriceDelta)}</div>
+                          <div className="helper">
+                            {num(row.marketPrice) > 0 ? `Compared with market price ${currency(row.marketPrice)}` : "Add market price to compare."}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
