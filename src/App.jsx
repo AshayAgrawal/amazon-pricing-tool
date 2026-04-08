@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Calculator, Download, Eye, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { Calculator, Download, Eye, Pencil, Plus, Save, Settings2, Trash2 } from "lucide-react";
 import { REFERRAL_FEE_RULES } from "./referralRules";
 
 const DEFAULT_ASSUMPTIONS = {
@@ -422,6 +422,13 @@ export default function App() {
     setExpandedRowId(nextId);
   };
 
+  const saveRow = (id) => {
+    setCsvMessage("SKU saved to the price list.");
+    const nextId = Date.now();
+    setRows((current) => [...current, { ...DEFAULT_ROW, id: nextId, productName: "" }]);
+    setExpandedRowId(nextId);
+  };
+
   const removeRow = (id) => {
     setRows((current) => {
       const nextRows = current.filter((row) => row.id !== id);
@@ -811,7 +818,7 @@ export default function App() {
                       </div>
                       <div className="result-grid section-output">
                         <div className="result-card">
-                          <div className="metric-label">Final selling price</div>
+                          <div className="metric-label">Calculated final selling price</div>
                           <div className="metric-value">{currency(row.targetSellingPrice)}</div>
                           <div className="helper" style={{ color: "rgba(251, 248, 242, 0.76)" }}>
                             Generated using this product's target margin of {pct(row.targetMarginPct)}.
@@ -824,6 +831,11 @@ export default function App() {
                             {num(row.marketPrice) > 0 ? `Compared with market price ${currency(row.marketPrice)}` : "Add market price to compare."}
                           </div>
                         </div>
+                      </div>
+                      <div className="section-output" style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button className="button" type="button" onClick={() => saveRow(row.id)}>
+                          <Save size={16} /> Save
+                        </button>
                       </div>
                     </div>
                   </div>
