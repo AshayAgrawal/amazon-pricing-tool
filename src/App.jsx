@@ -35,10 +35,6 @@ const DEFAULT_ASSUMPTIONS = {
     { upto: 999999, fee: 76 },
   ],
   referralFeeRules: REFERRAL_FEE_RULES,
-  gstRules: [
-    { name: "Bags", hsnCode: "42022220", productTaxCode: "A_GEN_STANDARD", gstPct: 18 },
-    { name: "Exempt", hsnCode: "", productTaxCode: "A_GEN_EXEMPT", gstPct: 0 },
-  ],
 };
 
 const DEFAULT_ROW = {
@@ -52,7 +48,7 @@ const DEFAULT_ROW = {
   breadthCm: 25,
   heightCm: 4,
   referralRule: "Handbags",
-  gstRule: "Bags",
+  gstPct: 18,
   targetMarginPct: 25,
   marketPrice: 999,
 };
@@ -67,7 +63,7 @@ const CSV_FIELDS = [
   "breadthCm",
   "heightCm",
   "referralRule",
-  "gstRule",
+  "gstPct",
   "targetMarginPct",
   "marketPrice",
 ];
@@ -144,7 +140,7 @@ function parseCsv(text) {
       breadthCm: num(mapped.breadthCm),
       heightCm: num(mapped.heightCm),
       referralRule: mapped.referralRule || DEFAULT_ASSUMPTIONS.referralFeeRules[0].name,
-      gstRule: mapped.gstRule || DEFAULT_ASSUMPTIONS.gstRules[0].name,
+      gstPct: num(mapped.gstPct || 18),
       targetMarginPct: num(mapped.targetMarginPct || 25),
       marketPrice: num(mapped.marketPrice),
     };
@@ -155,7 +151,7 @@ function exportCsv(rows) {
   const headers = [
     "Product Name",
     "Referral Rule",
-    "GST Rule",
+    "GST %",
     "Target Margin %",
     "Market Price",
     "Product Cost",
@@ -174,7 +170,7 @@ function exportCsv(rows) {
     const values = [
       row.productName,
       row.referralRuleApplied,
-      row.gstRuleApplied,
+      row.gstPctApplied,
       row.targetMarginPct,
       row.marketPrice,
       row.productCost,
@@ -246,20 +242,12 @@ function referralRuleForRow(row, assumptions) {
   );
 }
 
-function gstRuleForRow(row, assumptions) {
-  return (
-    assumptions.gstRules.find((rule) => rule.name === row.gstRule) ||
-    assumptions.gstRules[0] ||
-    { name: "Default", hsnCode: "", productTaxCode: "", gstPct: 0 }
-  );
-}
-
 function productCost(row) {
   return num(row.makingCost) + num(row.designCost) + num(row.overheadCost);
 }
 
-function productGstCost(row, assumptions) {
-  return (productCost(row) * num(gstRuleForRow(row, assumptions).gstPct)) / 100;
+function productGstCost(row) {
+  return (productCost(row) * num(row.gstPct)) / 100;
 }
 
 function referralPctAppliedForPrice(price, row, assumptions) {
@@ -291,7 +279,7 @@ function feeSnapshot(price, row, assumptions) {
 }
 
 function totalCostAtPrice(price, row, assumptions) {
-  return productCost(row) + productGstCost(row, assumptions) + feeSnapshot(price, row, assumptions).totalAmazonFees;
+  return productCost(row) + productGstCost(row) + feeSnapshot(price, row, assumptions).totalAmazonFees;
 }
 
 function solvePrice(row, assumptions, targetMarginPct) {
@@ -312,23 +300,23 @@ function solvePrice(row, assumptions, targetMarginPct) {
 
 function computeRow(row, assumptions) {
   const breakEvenPrice = solvePrice(row, assumptions, 0);
+  const breakEvenFees = feeSnapshot(breakEvenPrice, row, assumptions);
   const targetSellingPrice = solvePrice(row, assumptions, num(row.targetMarginPct));
   const targetFees = feeSnapshot(targetSellingPrice, row, assumptions);
   const referralRule = referralRuleForRow(row, assumptions);
-  const gstRule = gstRuleForRow(row, assumptions);
+  const targetProfitAtTarget = (targetSellingPrice * num(row.targetMarginPct)) / 100;
 
   return {
     ...row,
     chargeableWeightKg: chargeableWeightKg(row),
     productCost: productCost(row),
-    productGstCost: productGstCost(row, assumptions),
+    productGstCost: productGstCost(row),
     referralRuleApplied: referralRule.name,
-    gstRuleApplied: gstRule.name,
-    hsnCodeApplied: gstRule.hsnCode,
-    productTaxCodeApplied: gstRule.productTaxCode,
-    gstPctApplied: gstRule.gstPct,
+    gstPctApplied: num(row.gstPct),
     breakEvenPrice,
+    breakEvenAmazonFees: breakEvenFees.totalAmazonFees,
     targetSellingPrice,
+    targetProfitAtTarget,
     marketPriceDelta: targetSellingPrice - num(row.marketPrice),
     shippingFeeAtTarget: targetFees.shippingFee,
     closingFeeAtTarget: targetFees.closingFee,
@@ -428,20 +416,6 @@ export default function App() {
     }));
   };
 
-  const updateGstRule = (index, key, value) => {
-    setAssumptions((current) => ({
-      ...current,
-      gstRules: current.gstRules.map((rule, i) => (i === index ? { ...rule, [key]: value } : rule)),
-    }));
-  };
-
-  const addGstRule = () => {
-    setAssumptions((current) => ({
-      ...current,
-      gstRules: [...current.gstRules, { name: "New GST rule", hsnCode: "", productTaxCode: "", gstPct: 18 }],
-    }));
-  };
-
   const addRow = () => {
     const nextId = Date.now();
     setRows((current) => [...current, { ...DEFAULT_ROW, id: nextId, productName: "" }]);
@@ -511,6 +485,28 @@ export default function App() {
         .card { padding: 18px; }
         .section-label, .metric-label { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(32, 49, 45, 0.58); }
         .section-copy, .csv-message, .helper { margin-top: 6px; color: rgba(32, 49, 45, 0.62); line-height: 1.5; }
+        .helper-highlight {
+          margin-top: 10px;
+          padding: 10px 12px;
+          border-radius: 14px;
+          background: rgba(241, 162, 88, 0.14);
+          border: 1px solid rgba(241, 162, 88, 0.28);
+          color: #24423b;
+        }
+        .helper-highlight strong { color: #17302b; }
+        .calculation-list { display: grid; gap: 8px; margin-top: 12px; }
+        .calculation-card {
+          padding: 12px;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.72);
+          border: 1px solid rgba(32, 49, 45, 0.08);
+        }
+        .calculation-expression {
+          margin-top: 6px;
+          font-weight: 600;
+          line-height: 1.6;
+          color: #17302b;
+        }
         .section-head { margin-bottom: 16px; }
         .section-head h2 { margin: 6px 0 0; font-size: 1.35rem; letter-spacing: -0.03em; }
         .field { display: grid; gap: 6px; }
@@ -699,10 +695,8 @@ export default function App() {
                           <input type="number" value={row.targetMarginPct} onChange={(event) => updateRow(row.id, "targetMarginPct", event.target.value)} />
                         </div>
                         <div className="field">
-                          <label>GST rule</label>
-                          <select value={row.gstRule} onChange={(event) => updateRow(row.id, "gstRule", event.target.value)}>
-                            {assumptions.gstRules.map((rule) => <option key={rule.name} value={rule.name}>{rule.name}</option>)}
-                          </select>
+                          <label>GST %</label>
+                          <input type="number" value={row.gstPct} onChange={(event) => updateRow(row.id, "gstPct", event.target.value)} />
                         </div>
                       </div>
                     </div>
@@ -752,6 +746,10 @@ export default function App() {
                         <div className="helper section-output">
                           Selected slabs: {formatReferralBands(referralRuleForRow(row, assumptions))}
                         </div>
+                        <div className="helper helper-highlight">
+                          Applied referral slab at final selling price:{" "}
+                          <strong>{referralBandLabelForPrice(row.targetSellingPrice, referralRuleForRow(row, assumptions))}</strong>
+                        </div>
                       </div>
                       <div className="section-box" style={{ marginTop: 12 }}>
                         <h4>Shipping Fee</h4>
@@ -783,16 +781,33 @@ export default function App() {
                         <Metric label="GST on Amazon fees" value={currency(row.gstOnAmazonFeesAtTarget)} />
                         <Metric label="Total Amazon fees" value={currency(row.totalAmazonFeesAtTarget)} />
                       </div>
-                      <div className="helper" style={{ marginTop: 12 }}>
-                        Applied referral slab at final selling price: {referralBandLabelForPrice(row.targetSellingPrice, referralRuleForRow(row, assumptions))}
-                      </div>
                     </div>
 
                     <div className="section-box">
                       <h4>4. Final selling price</h4>
                       <div className="metric-grid">
-                        <Metric label="GST" value={`${row.gstRuleApplied} (${pct(row.gstPctApplied)}) - ${currency(row.productGstCost)}`} />
+                        <Metric label="GST" value={`${pct(row.gstPctApplied)} - ${currency(row.productGstCost)}`} />
                         <Metric label="Break even price" value={currency(row.breakEvenPrice)} />
+                      </div>
+                      <div className="calculation-list">
+                        <div className="calculation-card">
+                          <div className="metric-label">Break-even calculation</div>
+                          <div className="calculation-expression">
+                            {currency(row.productCost)} + {currency(row.productGstCost)} + {currency(row.breakEvenAmazonFees)} = {currency(row.breakEvenPrice)}
+                          </div>
+                          <div className="helper">
+                            Product cost + product GST + Amazon fees at break-even price.
+                          </div>
+                        </div>
+                        <div className="calculation-card">
+                          <div className="metric-label">Final selling price calculation</div>
+                          <div className="calculation-expression">
+                            {currency(row.productCost)} + {currency(row.productGstCost)} + {currency(row.totalAmazonFeesAtTarget)} + {currency(row.targetProfitAtTarget)} = {currency(row.targetSellingPrice)}
+                          </div>
+                          <div className="helper">
+                            Product cost + product GST + Amazon fees + target profit at {pct(row.targetMarginPct)} margin.
+                          </div>
+                        </div>
                       </div>
                       <div className="result-grid section-output">
                         <div className="result-card">
@@ -869,32 +884,22 @@ export default function App() {
             <section className="card">
               <div className="section-head">
                 <div>
-                  <div className="section-label">GST Rules</div>
-                  <h2>HSN / PTC mapping</h2>
-                  <div className="section-copy">Select one of these rules per product. Product GST is added to product cost in pricing.</div>
+                  <div className="section-label">Closing Fee Rules</div>
+                  <h2>Closing fee bands</h2>
+                  <div className="section-copy">Closing fee is picked from the selling price band and added into Amazon fees.</div>
                 </div>
               </div>
-              <div className="assumptions-wrap">
-                {assumptions.gstRules.map((rule, index) => (
-                  <div className="band-row" key={`${rule.name}-${index}`}>
-                    <div className="field">
-                      <label>Rule name</label>
-                      <input value={rule.name} onChange={(event) => updateGstRule(index, "name", event.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>HSN code</label>
-                      <input value={rule.hsnCode} onChange={(event) => updateGstRule(index, "hsnCode", event.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Product tax code</label>
-                      <input value={rule.productTaxCode} onChange={(event) => updateGstRule(index, "productTaxCode", event.target.value)} />
-                    </div>
-                    <AssumptionField label="GST %" value={rule.gstPct} onChange={(event) => updateGstRule(index, "gstPct", event.target.value)} />
+              <ul className="helper-list">
+                <li>Closing fee = fixed fee based on selling price band</li>
+                <li>GST on Amazon fees = GST % applied on shipping + referral + closing fee</li>
+              </ul>
+              <div className="assumptions-wrap" style={{ marginTop: 16 }}>
+                {assumptions.closingFeeBands.map((band, index) => (
+                  <div className="subgrid" key={`${band.upto}-${index}`}>
+                    <AssumptionField label="Selling price up to" value={band.upto} onChange={(event) => updateClosingFeeBand(index, "upto", event.target.value)} />
+                    <AssumptionField label="Closing fee" value={band.fee} onChange={(event) => updateClosingFeeBand(index, "fee", event.target.value)} />
                   </div>
                 ))}
-                <button className="button" type="button" onClick={addGstRule}>
-                  <Plus size={16} /> Add GST rule
-                </button>
               </div>
             </section>
 
@@ -928,28 +933,6 @@ export default function App() {
                     <div className="helper" style={{ marginTop: 8 }}>
                       {formatReferralBands(rule)}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="card">
-              <div className="section-head">
-                <div>
-                  <div className="section-label">Closing Fee Rules</div>
-                  <h2>Closing fee bands</h2>
-                  <div className="section-copy">Closing fee is picked from the selling price band and added into Amazon fees.</div>
-                </div>
-              </div>
-              <ul className="helper-list">
-                <li>Closing fee = fixed fee based on selling price band</li>
-                <li>GST on Amazon fees = GST % applied on shipping + referral + closing fee</li>
-              </ul>
-              <div className="assumptions-wrap" style={{ marginTop: 16 }}>
-                {assumptions.closingFeeBands.map((band, index) => (
-                  <div className="subgrid" key={`${band.upto}-${index}`}>
-                    <AssumptionField label="Selling price up to" value={band.upto} onChange={(event) => updateClosingFeeBand(index, "upto", event.target.value)} />
-                    <AssumptionField label="Closing fee" value={band.fee} onChange={(event) => updateClosingFeeBand(index, "fee", event.target.value)} />
                   </div>
                 ))}
               </div>
