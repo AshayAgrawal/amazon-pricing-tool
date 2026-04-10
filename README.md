@@ -1,6 +1,6 @@
 # Amazon Pricing Tool
 
-This is a React-based pricing calculator for Amazon India listings. It helps you estimate the selling price needed for each SKU after accounting for product cost, GST, Amazon fees, shipping charges, and your target margin.
+This is a pricing calculator for Amazon Seller who is listing products on Amazon India. It helps you estimate the selling price needed for each SKU after accounting for product cost, GST, Amazon fees, shipping charges, and your target margin.
 
 The app is intended for sellers who want a faster way to answer questions like:
 
@@ -38,6 +38,9 @@ It then calculates:
 - Edit shared assumptions from the UI
 - Search referral fee categories
 - Switch between Amazon STEP shipping levels
+
+## Video Walkthrough of the tool
+https://www.loom.com/share/3aaf6b509e974a7697f5150fe3744a53 
 
 ## Tech Stack
 
@@ -201,3 +204,4 @@ And Amazon fees include:
 - Referral fee categories are currently stored in [`src/referralRules.js`](/Users/ashayagrawal/amazon-pricing-tool/src/referralRules.js).
 - Default assumptions are defined in [`src/App.jsx`](/Users/ashayagrawal/amazon-pricing-tool/src/App.jsx).
 - This tool is currently front-end only and does not require a backend.
+
